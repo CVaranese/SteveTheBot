@@ -65,7 +65,7 @@ def decide_action(agentOutput):
     elif action_index == NEUTRAL:
         return "", (.5, .5)
 
-    if action_index == A_RIGHT:
+    elif action_index == A_RIGHT:
         return enums.Button.BUTTON_A, (1, .5)
     elif action_index == B_RIGHT:
         return enums.Button.BUTTON_B, (1, .5)
@@ -76,7 +76,7 @@ def decide_action(agentOutput):
     elif action_index == Z_RIGHT:
         return enums.Button.BUTTON_Z, (1, .5)
 
-    if action_index == A_LEFT:
+    elif action_index == A_LEFT:
         return enums.Button.BUTTON_A, (0, .5)
     elif action_index == B_LEFT:
         return enums.Button.BUTTON_B, (0, .5)
@@ -87,7 +87,7 @@ def decide_action(agentOutput):
     elif action_index == Z_LEFT:
         return enums.Button.BUTTON_Z, (0, .5)
 
-    if action_index == A_DOWN:
+    elif action_index == A_DOWN:
         return enums.Button.BUTTON_A, (.5, 0)
     elif action_index == B_DOWN:
         return enums.Button.BUTTON_B, (.5, 0)
@@ -98,7 +98,7 @@ def decide_action(agentOutput):
     elif action_index == Z_DOWN:
         return enums.Button.BUTTON_Z, (.5, 0)
 
-    if action_index == A_UP:
+    elif action_index == A_UP:
         return enums.Button.BUTTON_A, (.5, 1)
     elif action_index == B_UP:
         return enums.Button.BUTTON_B, (.5, 1)
