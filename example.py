@@ -4,7 +4,10 @@ import keras
 import argparse
 import signal
 import sys
+import os.path
+from pathlib import path
 
+batchSize = 10
 #This example program demonstrates how to use the Melee API to run dolphin programatically,
 #   setup controllers, and send button presses over to dolphin
 
@@ -40,8 +43,8 @@ def main():
                         help='Debug mode. Creates a CSV of all game state')
     parser.add_argument('--framerecord', '-r', default=False, action='store_true',
                         help='Records frame data from the match, stores into framedata.csv')
-    #parser.add_argument('model', '-m', type=str, default="",
-    #                    help='The file of the AI')
+    parser.add_argument('model', type=str, default="Steve",
+                        help='The file of the AI')
 
     args = parser.parse_args()
 
@@ -73,37 +76,36 @@ def main():
     controller.connect()
 
     model = []
-    #if args.model == "":
-    #    pass
-        #model = createModel()
-    #else:
-    #    pass
-        #model = keras.models.load_model('models/' + args.model)
+    modelFile = Path("models/" + args.model)
+    if modelFile.exists():
+        model = keras.models.load_model('models/' + args.model)
+    else:
+        model = createModel()
 
     #Main loop
-    i = 0
+    numGames = 0
+    allMemories = []
+    gameMemory = []
+    prevObservation = []
+    observation = []
+    output = []
+    score = 0
+    totalScores = 0
     while True:
-        i += 1
-        i = i % 101
         #"step" to the next frame
         gamestate.step()
-        if(gamestate.processingtime * 1000 > 12):
-            print("WARNING: Last frame took " + str(gamestate.processingtime*1000) + "ms to process.")
-
         #What menu are we in?
         if gamestate.menu_state == melee.enums.Menu.IN_GAME:
-            if i == 100:
-                print(len(gamestate.tolist()))
-            if args.framerecord:
-                framedata.recordframe(gamestate)
-            #XXX: This is where your AI does all of its stuff!
-            #This line will get hit once per frame, so here is where you read
-            #   in the gamestate and decide what buttons to push on the controller
-            if args.framerecord:
-                melee.techskill.upsmashes(ai_state=gamestate.ai_state, controller=controller)
-            else:
-                melee.techskill.multishine(ai_state=gamestate.ai_state, controller=controller)
+            tempreward = 0
+            prevObservation = observation
+            observation = gamestate.tolist()
+            score += calcReward(prevObservation, observation)
 
+            currentAction = model.predict(observation)
+
+            gameMemory.append(observation, currentAction, tempReward)
+            
+            #plug prediction in to move function
 
         #If we're at the character select screen, choose our character
         elif gamestate.menu_state == melee.enums.Menu.CHARACTER_SELECT:
@@ -111,6 +113,18 @@ def main():
                 gamestate=gamestate, controller=controller, swag=True, start=True)
         #If we're at the postgame scores screen, spam START
         elif gamestate.menu_state == melee.enums.Menu.POSTGAME_SCORES:
+            if len(gameMemory) > 0:
+               gameMemory[0][2] = score
+               totalScore += score
+               allMemories.append(gameMemory)
+               gameMemory = []
+               score = 0
+               numGames += 1
+               if numGames >= batchSize:
+                  allMemories = fillRewards(allMemories, totalScore, numGames)
+                  model = trainModel(allMemories, model)
+                  model.save("model/" + args.model)
+                  numGames = 0
             melee.menuhelper.skippostgame(controller=controller)
         #If we're at the stage select screen, choose a stage
         elif gamestate.menu_state == melee.enums.Menu.STAGE_SELECT:
