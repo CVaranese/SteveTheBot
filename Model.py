@@ -1,17 +1,20 @@
 import keras
 from keras.models import Sequential
 from keras.layers import Dense
-from numpy import np
+from keras.layers.core import Dropout
 
 # length of outputs = 31
-# length of inputs = 34
+# length of inputs = 32
 
 
-def buildModel()
+def buildModel():
     model = Sequential()
-    model.add(Dense(18, input_dim=34, activation='relu'))
-    model.add(Dense(18, activation='relu'))
-    model.add(Dense(31, activation = 'softmax'))
+    model.add(Dense(64, input_dim=17))
+    model.add(Dropout(.4))
+    #model.add(Dense(256, activation='relu'))
+    #model.add(Dropout(.4))
+    model.add(Dense(31, activation='softmax'))
 
-    model.compile(loss='mse', optimizer='adam')
+    model.compile(loss='categorical_crossentropy', optimizer='adam')
+    print("WEIGHTS: ", model.get_weights())
     return model

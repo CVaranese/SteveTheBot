@@ -5,5 +5,13 @@ def trainModel(gameMemory, model):
    y = np.array([i[1] for i in gameMemory])
    rewards = np.array([i[2] for i in gameMemory])
 
-   model.fit(x, y, sample_weight=rewards, epochs=1)
+   print("X: ")
+   print(x)
+   print("Y: ")
+   print(y)
+   print("REWARDX: ")
+   print(rewards)
+
+   model.fit(x, y, sample_weight=rewards, epochs=5)
+   #model.fit(x, y, epochs=2, batch_size=32)
    return model

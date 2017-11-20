@@ -1,0 +1,10 @@
+Needs to know:
+-Distance (num / 40)
+for each char:
+-x position ( num / 85
+-direction  (-1/1)
+-action  (punishable = > 0x2c - 1, non - -1)
+-frames left in stun - ( 0 - ~1)
+-jumps left - -1/1
+-speed - 0 - .2
+-on/off stage - -1/1
