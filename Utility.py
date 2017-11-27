@@ -36,8 +36,35 @@ B_UP = 26
 X_UP = 27
 Z_UP = 28
 L_UP = 29
-# taunt
-TAUNT = 30
+# up right with actions
+A_NE = 30
+B_NE = 31
+X_NE = 32
+Z_NE = 33
+L_NE = 34
+# up left with actions
+A_NW = 35
+B_NW = 36
+X_NW = 37
+Z_NW = 38
+L_NW = 39
+# down right with actions
+A_SE = 40
+B_SE = 41
+X_SE = 42
+Z_SE = 43
+L_SE = 44
+# down left with actions
+A_SW = 45
+B_SW = 46
+X_SW = 47
+Z_SW = 48
+L_SW = 49
+# 4 more movements no action
+NE = 50
+NW= 51
+SE = 52
+SW = 53
 
 
 # takes the max of the output
@@ -66,6 +93,15 @@ def decide_action(action_index):
         return None, (.5, 1)
     elif action_index == NEUTRAL:
         return None, (.5, .5)
+
+    elif action_index == NE:
+        return None, (1, 1)
+    elif action_index == NW:
+        return None, (0, 1)
+    elif action_index == SE:
+        return None, (1, 0)
+    elif action_index == SW:
+        return None, (0, 0)
 
     elif action_index == A_RIGHT:
         return melee.enums.Button.BUTTON_A, (1, .5)
@@ -111,5 +147,46 @@ def decide_action(action_index):
     elif action_index == Z_UP:
         return melee.enums.Button.BUTTON_Z, (.5, 1)
 
-    elif action_index == TAUNT:
-        return melee.enums.Button.BUTTON_D_UP, (.5, .5)
+    elif action_index == A_NE:
+        return melee.enums.Button.BUTTON_A, (1, 1)
+    elif action_index == B_NE:
+        return melee.enums.Button.BUTTON_B, (1, 1)
+    elif action_index == X_NE:
+        return melee.enums.Button.BUTTON_X, (1, 1)
+    elif action_index == L_NE:
+        return melee.enums.Button.BUTTON_L, (1, 1)
+    elif action_index == Z_NE:
+        return melee.enums.Button.BUTTON_Z, (1, 1)
+
+    elif action_index == A_NW:
+        return melee.enums.Button.BUTTON_A, (0, 1)
+    elif action_index == B_NW:
+        return melee.enums.Button.BUTTON_B, (0, 1)
+    elif action_index == X_NW:
+        return melee.enums.Button.BUTTON_X, (0, 1)
+    elif action_index == L_NW:
+        return melee.enums.Button.BUTTON_L, (0, 1)
+    elif action_index == Z_NW:
+        return melee.enums.Button.BUTTON_Z, (0, 1)
+
+    elif action_index == A_SW:
+        return melee.enums.Button.BUTTON_A, (0, 0)
+    elif action_index == B_SW:
+        return melee.enums.Button.BUTTON_B, (0, 0)
+    elif action_index == X_SW:
+        return melee.enums.Button.BUTTON_X, (0, 0)
+    elif action_index == L_SW:
+        return melee.enums.Button.BUTTON_L, (0, 0)
+    elif action_index == Z_SW:
+        return melee.enums.Button.BUTTON_Z, (0, 0)
+
+    elif action_index == A_SE:
+        return melee.enums.Button.BUTTON_A, (1, 0)
+    elif action_index == B_SE:
+        return melee.enums.Button.BUTTON_B, (1, 0)
+    elif action_index == X_SE:
+        return melee.enums.Button.BUTTON_X, (1, 0)
+    elif action_index == L_SE:
+        return melee.enums.Button.BUTTON_L, (1, 0)
+    elif action_index == Z_SE:
+        return melee.enums.Button.BUTTON_Z, (1, 0)

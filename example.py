@@ -105,6 +105,9 @@ def main():
     stepNum = 0
     batchNum = 0
     fixedData = []
+    recordedMem =[]
+    tempMem = []
+    prediction = []
     while True:
         stepNum += 1
         if stepNum >= 1000:
@@ -120,19 +123,31 @@ def main():
             fixedData = dataFix.normalizeData(observation)
             if len(prevObservation) > 0:
                 score += rewards.calcReward(prevObservation, observation)
-
-            prediction = model.predict(np.array(fixedData).reshape(-1, len(fixedData)))
+            if len(prediction) == 0:
+                fixedData = np.append(fixedData, 
+                    keras.utils.to_categorical(30))
+            else:
+                fixedData = np.append(fixedData, prediction)
+            fixedArray = []
+            for i in range(len(gameMemory) - 14, len(gameMemory)):
+                if i < 0:
+                    fixedArray.append(np.zeros(50))
+                else:
+                    fixedArray.append(gameMemory[i][0])
+            fixedArray.append(fixedData)
+            fixedArray = np.array(fixedArray).reshape(1, 15, 50)
+            firstPrediction = model.predict(fixedArray)
+            #firstPrediction = model.predict(np.array(fixedData).reshape(-1, 1, len(fixedData)))
+            prediction = firstPrediction
             if stepNum == 999:
                 print("Before Rand: ", prediction)
                 print("OBS: ", fixedData)
                 print("Random: ", batchNum, "num: ", math.exp(-.5 *(.25+batchNum)))
             maxIndex = np.argmax(prediction, axis=1)[0]
-            #if random.random() < math.exp((-.5)*(.25 + batchNum)):
-            #    maxIndex = random.randint(0, 30)
+            if random.random() < (.05):#, math.exp((-.5)*(.25 + batchNum))):
+                maxIndex = random.randint(0, 30)
             prediction = keras.utils.to_categorical(maxIndex,
                 num_classes=len(prediction[0]))
-            if stepNum == 999:
-                print("After Rand: ", prediction)
 
             button, stick = Utility.decide_action(maxIndex)
             controller.simple_press(stick[0], stick[1], button)
@@ -140,6 +155,7 @@ def main():
             gameMemory.append([(fixedData), 
                                (prediction), 
                                tempReward])
+            recordedMem.append([fixedData, firstPrediction, tempReward])
             if stepNum == 999:
                 #print("CURGAMEMEM: ", gameMemory[len(gameMemory)-1])
                 #print("FIRSTGAMEMEM: ", gameMemory[0])
@@ -151,14 +167,14 @@ def main():
 
         #If we're at the character select screen, choose our character
         elif gamestate.menu_state == melee.enums.Menu.CHARACTER_SELECT:
-            if (gamestate.player[1].controller_status != melee.enums.ControllerStatus.CONTROLLER_CPU
-                and pickedCPU == 0):
-                melee.menuhelper.changecontrollerstatus(controller, gamestate, 1, 
-                    melee.enums.ControllerStatus.CONTROLLER_CPU, character=None)
-            else:
-                pickedCPU = 1
-                melee.menuhelper.choosecharacter(character=melee.enums.Character.KIRBY,
-                    gamestate=gamestate, controller=controller, swag=False, start=True)
+            #if (gamestate.player[1].controller_status != melee.enums.ControllerStatus.CONTROLLER_CPU
+            #    and pickedCPU == 0):
+            #    melee.menuhelper.changecontrollerstatus(controller, gamestate, 1, 
+            #        melee.enums.ControllerStatus.CONTROLLER_CPU, character=melee.enums.Character.GANONDORF)
+            #else:
+            #    pickedCPU = 1
+            melee.menuhelper.choosecharacter(character=melee.enums.Character.KIRBY,
+                gamestate=gamestate, controller=controller, swag=True, start=True)
         #If we're at the postgame scores screen, spam START
         elif gamestate.menu_state == melee.enums.Menu.POSTGAME_SCORES:
             firstStart = True
@@ -182,12 +198,17 @@ def main():
                if numGames >= batchSize:
                   batchNum += 1
                   allMemories = rewards.fillRewards(allMemories, totalScore, numGames)
-                  print(allMemories)
+                  recordedMem = rewards.fillRewards(recordedMem, totalScore, numGames)
+                  f = open('logs/batch' + str(batchNum) + '.txt', 'w+')
+                  #for val in recordedMem:
+                  #   f.write(str(val) + '\n')
+                  #f.close()
                   model = train.trainModel(allMemories, model)
                   model.save("models/" + args.model)
                   numGames = 0
                   allMemories = np.array([])
                   prevObservation = []
+                  recordedMem = []
                   observation = []
                   totalScore = []
             melee.menuhelper.skippostgame(controller=controller)

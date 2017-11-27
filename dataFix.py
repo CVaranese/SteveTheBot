@@ -1,75 +1,71 @@
+import numpy as np
+from keras import utils
 def normalizeData(data):
-    dataOut = []
-    #distance = d/40
-    dataOut.append(data[0]/40)
+    maxActions = 0x017E
+    dataOut = np.array([])
+    #Do not use distance or stage
     index = 2
     for i in range(2):
-        #x = x/85
-        dataOut.append(data[index]/85)
+        #x = x/10
+        dataOut = np.append(dataOut,data[index]*.1)
         index += 1
-        #no need for y
-        #dataOut.append(data[index]/30)
+        #y = y/10
+        dataOut = np.append(dataOut,data[index]*.1)
         index += 1
-        #no percent
-        #dataOut.append(data[index]/40)
+        #percent = percent/100
+        dataOut = np.append(dataOut,data[index]*.01)
         index += 1
-        #no stock
+        #no stock since we're in infinite time
         #dataOut.append(data[index]/4)
         index += 1
-        #facing
+        #facing -> -1 if left, 1 if right
         if data[index] == 1:
-            dataOut.append(data[index])
+            dataOut = np.append(dataOut, 1)
         else:
-            dataOut.append(-1)
+            dataOut = np.append(dataOut, -1)
         index += 1
-        #Action value = 1 if > 0x2c
-        if data[index] >= 0x2c:
-            dataOut.append(1)
-        else:
-            dataOut.append(-1)
+        #Action value = categorically encoded (max = maxActions)
+        action = data[index]
+        if action == 65535: #unknown action from dolphin for some reason
+            action = maxActions + 1
+        catAction = utils.to_categorical(action, maxActions+2)
+
+        dataOut = np.append(dataOut, catAction)
         index += 1
-        #action frame
-        #dataOut.append(data[index]/10)
+        #action frame = frame*.02
+        dataOut = np.append(dataOut,data[index]*.02)
         index += 1
-        #invuln
-        #if data[index] == 1:
-        #    dataOut.append(data[index])
-        #else:
-        #    dataOut.append(-1)
+        #invuln = 0 if no 1 if yes
+        dataOut = np.append(dataOut,data[index])
         index += 1
-        #stun frames left
-        dataOut.append((data[index] + data[index + 1])/30)
+        #hitlag frames left
+        dataOut = np.append(dataOut,data[index]*.1)
         index += 1
-        #dataOut.append(data[index]/5)
+        #hitstun frames left
+        dataOut = np.append(dataOut,data[index]*.1)
         index += 1
-        #charging smash
-        #if data[index] == 1:
-        #    dataOut.append(data[index])
-        #else:
-        #    dataOut.append(-1)
+        #charging smash, 0 if no 1 if yes
+        dataOut = np.append(dataOut,data[index])
         index += 1
-        #jumps = 1 if > 0
-        if data[index] > 0:
-            dataOut.append(1)
-        else:
-            dataOut.append(0)
+        #jumps
+        dataOut = np.append(dataOut,data[index])
         index += 1
-        #on ground
+        #in air = 1 if yes 0 if no
         if data[index] == 1:
-            dataOut.append(data[index])
+            dataOut = np.append(dataOut,0)
         else:
-            dataOut.append(-1)
+            dataOut = np.append(dataOut,1)
         index += 1
         #x speed
-        dataOut.append(data[index]/5)
+        dataOut = np.append(dataOut,data[index]*.5)
         index += 1
         #y speed
-        #dataOut.append(data[index]/3)
+        dataOut = np.append(dataOut,data[index]*.5)
         index += 1
-        #off stage
+        #off stage = 1 if yes 0 if no
         if data[index] == 1:
-            dataOut.append(data[index])
+            dataOut = np.append(dataOut,1)
         else:
-            dataOut.append(-1)
+            dataOut = np.append(dataOut,0)
         index += 1
     return dataOut
