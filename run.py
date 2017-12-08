@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import melee
+import time
 import keras
 import math
 import argparse
@@ -15,11 +16,14 @@ import random
 import numpy as np
 import loss
 from pathlib import Path
+from pynput.keyboard import Key, Controller
 
-batchSize = 100
-episodeLength = 5
+batchSize = 50
+episodeLength = 10
 actionsPerSecond = 30
-df = .99
+df = .98
+rewardN = 20
+batchMemory = 10
 #This example program demonstrates how to use the Melee API to run dolphin programatically,
 #   setup controllers, and send button presses over to dolphin
 
@@ -74,6 +78,7 @@ def main():
     gamestate = melee.gamestate.GameState(dolphin)
     #Create our Controller object that we can press buttons on
     controller = melee.controller.Controller(port=args.port, dolphin=dolphin)
+    keyboard = Controller()
 
 
     signal.signal(signal.SIGINT, signal_handler)
@@ -118,11 +123,14 @@ def main():
     stepNum = 0
     batchNum = 0
     fixedData = []
+    First = True
     recordedMem =[]
     tempMem = []
     prediction = []
     episodeMemory = []
     episodeReward = 0
+    curSave = 0
+    loadState = False
     while True:
         gamestate.step() 
         stepNum += 1
@@ -141,7 +149,6 @@ def main():
             #play number of episodes, where an episode is a 10 second length of gametime
             #after the specified number, train agent
             for batch in range(batchSize):
-                
                 #episodes are x seconds * 30 frames per second
                 for _ in range(episodeLength*30):
 
@@ -153,14 +160,14 @@ def main():
                     fixedObs = fixedObs.reshape(1, len(fixedObs))
                     #print("fixedObs: ",fixedObs)
                     action = actorModel.predict(fixedObs)
-                    if _ == 50:
+                    if _%30 == 0:
                         print("PREDICTION: ", action)
                     #find which move was predicted
                     #maxIndex = np.argmax(action, axis=1)[0]
                     maxIndex = np.random.choice(range(54), p=action[0])
                     #change to random move if necessary
-                    if random.random() < .02:#max(.02, math.exp((-.75)*(batchNum + 2.5))):
-                        maxIndex = random.randint(0, 53)
+                    #if random.random() < .05:#max(.02, math.exp((-.75)*(batchNum + 2.5))):
+                    #    maxIndex = random.randint(0, 53)
                     #convert to categorical i.e. [0, 0, 0, 0, 1, 0, 0]
                     prediction = keras.utils.to_categorical(maxIndex,
                         num_classes=len(action[0]))
@@ -188,8 +195,10 @@ def main():
                     episodeReward += reward
 
                     #record what happened
-                    episodeMemory.append([fixedObs, prediction, reward, predictedReward, 0])
-                    #print("EP MEM: ", episodeMemory)
+                    episodeMemory.append([fixedObs, prediction, reward, predictedReward, 0, 0])
+                    #print("Pred Rew: ", predictedReward)
+                    #print("Actual Rew: ", reward)
+                    #print("\nMEM: ", episodeMemory[len(episodeMemory) - 1])
                     
                     #fix the data to a format we can use
                     fixedObs = dataFix.normalizeData(observation)
@@ -201,31 +210,49 @@ def main():
                 totalScore.append(episodeReward)
                 print("E Reward: ", episodeReward)
                 print("Num: ", batch)
-                curReward = 0
+                curReward = episodeMemory[-1][3]
                 episodeReward = 0
-                i = len(episodeMemory) - 1
-                while i >= 0:
-                    curReward *= df
+                for i in reversed(range(len(episodeMemory))):
                     ri = episodeMemory[i][2]
                     curReward += ri
-                    episodeMemory[i][2] = curReward
-                    episodeMemory[i][4] = curReward - (episodeMemory[i][3] -
-                        episodeMemory[len(episodeMemory) - 1][3]*(df**(len(episodeMemory)-1-i)))
+                    #if i < len(episodeMemory) - rewardN:
+                        #curReward -= episodeMemory[i+rewardN][2]*(df**(rewardN))
+                        #episodeMemory[i][4] = curReward - (episodeMemory[i][3])
+                            #episodeMemory[i + rewardN][3]*(df**(rewardN)))
+                    #else:
+                        #episodeMemory[i][4] += episodeMemory[len(episodeMemory) - 1][3]*(df**(len(episodeMemory) - 1 - i))
+                        #episodeMemory[i][4] = curReward - (episodeMemory[i][3] -
+                        #    episodeMemory[len(episodeMemory) - i][3]*(df**(len(episodeMemory) - i - 1)))
+                    episodeMemory[i][4] += curReward - episodeMemory[i][3]
+                    episodeMemory[i][5] = curReward
+                    #episodeMemory[i][2] = curReward
+                    #if i < len(episodeMemory) - 20:
+                    #    episodeMemory[i][4] -= episodeMemory[i+20][2]*(df**20)
                     #print("INPUT: ", episodeMemory[i][0])
                     #print("REW: ", episodeMemory[i][2])
-                    #print("PRED: ", episodeMemory[i][3])
+                    #print("CUR: ", episodeMemory[i][5])
+                    print("PRED: ", episodeMemory[i][3])
                     #print("ADV: ", episodeMemory[i][4])
-                    #print()
-                    #adding in entropy
-                    #episodeMemory[i][4] += np.random.normal(0, .075)
-                    i -= 1
+                    print()
+                    curReward *= df
+                    
+                #loadState = True
+                #actorModel = train.trainActorModel(episodeMemory, actorModel)
+                #actorModel.save("models/" + args.model + "/actor.h5")
+                #valueModel = train.trainValueModel(episodeMemory, valueModel)
+                #valueModel.save("models/" + args.model + "/value.h5")
+                #allMemories = np.array([])
+                #totalScore = []
 
                 #add this episode to our memory
                 #print("EP MEM: ", episodeMemory)
                 if len(allMemories) == 0:
                     allMemories = episodeMemory
-                else:
+                elif len(allMemories) <= batchSize*episodeLength*actionsPerSecond*batchMemory:
                     allMemories = np.append(allMemories, episodeMemory, axis=0)
+                else:
+                    allMemories = np.append(allMemories[batchSize*episodeLength*actionsPerSecond:],
+                        episodeMemory, axis=0)
                 #print("ALL MEMS: ", allMemories)
                 episodeMemory = []
 
@@ -233,12 +260,18 @@ def main():
 
             #batch is done
             batchNum += 1
-            actorModel = train.trainActorModel(allMemories, actorModel)
+            print("LEN: ", len(allMemories))
+            trainMems = allMemories[np.random.choice(allMemories.shape[0], allMemories.shape[0]//4, replace=False)]
+            for mem in trainMems:
+                mem[3] = valueModel.predict(mem[0])[0][0]
+                mem[4] = mem[5] - mem[3]
+            actorModel = train.trainActorModel(trainMems, actorModel)
             actorModel.save("models/" + args.model + "/actor.h5")
-            valueModel = train.trainValueModel(allMemories, valueModel)
-            valueModel.save("models/" + args.model + "/value.h5")
-            allMemories = np.array([])
-            totalScore = []
+            #if batchNum % 200 == 0:
+            #    valueModel = train.trainValueModel(trainMems, valueModel)
+            #    valueModel.save("models/" + args.model + "/value.h5")
+            #allMemories = np.array([])
+            #totalScore = []
 
             '''
             tempReward = None
@@ -284,8 +317,8 @@ def main():
 
         #If we're at the character select screen, choose our character
         elif gamestate.menu_state == melee.enums.Menu.CHARACTER_SELECT:
-            melee.menuhelper.choosecharacter(character=melee.enums.Character.KIRBY,
-                gamestate=gamestate, controller=controller, swag=True, start=True)
+            melee.menuhelper.choosecharacter(character=melee.enums.Character.CPTFALCON,
+                gamestate=gamestate, controller=controller, swag=False, start=False)
 
         #If we're at the postgame scores screen, spam START
         #Postgame screen isnt relevant for out purposes right now

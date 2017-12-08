@@ -31,11 +31,11 @@ def calcReward(prevObservation, curObservation):
    #stocksLost = prevObservation[5] - curObservation[5]
    #stocksWon = prevObservation[5+16] - curObservation[5+16]
    if stocksLost > 0 or stocksWon > 0:
-       return -1*stocksLost + 2*stocksWon
+       return -1*stocksLost + 1*stocksWon
    percentLost = curObservation[4] - prevObservation[4]
    percentWon = curObservation[4+16] - prevObservation[4+16]
    if percentLost > 0 or percentWon > 0:
-    return .03*percentWon - .01*percentLost
+    return .01*percentWon - .01*percentLost
    return 0
 
 
